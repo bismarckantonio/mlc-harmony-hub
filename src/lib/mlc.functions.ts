@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { loadProfileById, reconcile } from "./mlc.server";
+import { loadProfileById, reconcile, searchByIsrc } from "./mlc.server";
 
 const inputSchema = z.object({
   trackTitle: z.string().max(300).default(""),
@@ -22,3 +22,7 @@ export const selectCandidate = createServerFn({ method: "POST" })
     const { workId, ...input } = data;
     return loadProfileById(workId, input);
   });
+
+export const lookupIsrc = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => z.object({ isrc: z.string().min(5).max(40) }).parse(data))
+  .handler(async ({ data }) => searchByIsrc(data.isrc));
