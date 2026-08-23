@@ -437,7 +437,7 @@ export async function reconcile(input: ReconcileInput): Promise<ReconcileResult>
     const detail = (await fetchWorkDetail(best.id)) ?? best;
     const recordings = await fetchRecordings(best.id);
     profile = buildProfile(detail, recordings, input);
-    if (scored.length > 1 && scored[1].score >= scored[0].score - 5) {
+    if (scored.length > 1 && (scored[1]?.score ?? 0) >= (scored[0]?.score ?? 0) - 5) {
       profile.flags.unshift({
         code: "AMBIGUOUS_MATCH",
         severity: "warning",
