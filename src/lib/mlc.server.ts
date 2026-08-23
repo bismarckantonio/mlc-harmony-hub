@@ -9,6 +9,7 @@ import type {
   ReconciledWriter,
   ReconciliationFlag,
   WorkProfile,
+  IsrcLookupResult,
 } from "./mlc-types";
 
 const API_BASE = "https://api.ptl.themlc.com/api2v/public";
@@ -464,4 +465,60 @@ export async function loadProfileById(
   if (!detail) return null;
   const recordings = await fetchRecordings(workId);
   return buildProfile(detail, recordings, input);
+}
+
+// ---------- ISRC lookup ----------
+
+export async function searchByIsrc(rawIsrc: string): Promise<IsrcLookupResult> {
+  const isrc = rawIsrc.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const searched_at = new Date().toISOString();
+  const empty: IsrcLookupResult = {
+    isrc,
+    searched_at,
+    found: false,
+    claim_status: "NOT_FOUND",
+    claimed_percentage: 0,
+    unclaimed_percentage: 100,
+    recording_title: "",
+    recording_artist: "",
+    profile: null,
+  };
+  if (!isrc) return empty;
+
+  let works: RawWork[] = [];
+  try {
+    works = await searchWorks({ recordingIsrcs: isrc }, 5);
+  } catch {
+    return empty;
+  }
+  const best = works[0];
+  if (!best) return empty;
+
+  const detail = (await fetchWorkDetail(best.id)) ?? best;
+  const recordings = await fetchRecordings(best.id);
+  const profile = buildProfile(detail, recordings, {
+    trackTitle: "",
+    iswc: "",
+    mainArtist: "",
+    composers: "",
+    publishers: "",
+  });
+
+  const hit =
+    [...(best.matchedRecordings?.recordings ?? []), ...recordings].find(
+      (r) => (r.isrc ?? "").toUpperCase() === isrc,
+    ) ?? null;
+
+  const claimed = Math.max(0, Math.min(100, profile.total_known_shares));
+  return {
+    isrc,
+    searched_at,
+    found: true,
+    claim_status: claimed >= 100 ? "FULLY_CLAIMED" : "PARTIALLY_CLAIMED",
+    claimed_percentage: Number(claimed.toFixed(2)),
+    unclaimed_percentage: Number((100 - claimed).toFixed(2)),
+    recording_title: hit?.recordingTitle ?? "",
+    recording_artist: hit?.recordingDisplayArtistName ?? "",
+    profile,
+  };
 }

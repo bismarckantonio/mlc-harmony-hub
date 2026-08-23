@@ -89,3 +89,19 @@ export interface ReconcileResult {
   input_echo: ReconcileInput;
   generated_at: string;
 }
+
+// ---- ISRC lookup (claim status) ----
+
+export type ClaimStatus = "FULLY_CLAIMED" | "PARTIALLY_CLAIMED" | "NOT_FOUND";
+
+export interface IsrcLookupResult {
+  isrc: string;
+  searched_at: string;
+  found: boolean;
+  claim_status: ClaimStatus;
+  claimed_percentage: number;
+  unclaimed_percentage: number;
+  recording_title: string;
+  recording_artist: string;
+  profile: WorkProfile | null;
+}
